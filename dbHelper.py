@@ -44,11 +44,11 @@ def checkUser(username, password):
 def downloadCheckPlan(sQCUserID, iID):
     jsonresult = ''
     record_count = 0
-    sql = "select iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID from qmCheckPlan where sQCUserID = '%s' and iID > %s"%(sQCUserID, iID)
+    sql = "select iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID from qmCheckPlan where sQCUserID = '%s' and iID > %s and bApproved = 1"%(sQCUserID, iID)
     recSet = sqlQuery(getConn(), sql)
     for recOne in recSet:
         stra = '{"iID":"'+str(recOne.iID)+'","iFactoryID":"'+str(recOne.iFactoryID)+'","sOrderNo":"'+recOne.sOrderNo+'","sStyleNo":"'+recOne.sStyleNo+'","sProductID":"' \
-            +recOne.sProductID+'","dRequestCheck":"'+str(recOne.dRequestCheck)+'","sCheckItemDesc":"'+recOne.sCheckItemDesc.decode( "GB2312")+'","sQCUserID":"'+str(recOne.sQCUserID)+'","sUserID":"'+str(recOne.sUserID)+'"}'
+            +recOne.sProductID+'","dRequestCheck":"'+str(recOne.dRequestCheck)+'","sCheckItemDesc":"'+recOne.sCheckItemDesc.decode( "GB2312")+'","sQCUserID":"'+str(recOne.sQCUserID)+'","sUserID":"'+str(recOne.sUserID)+'","bApproved":"'+str(recOne.bApproved)+'"}'
         if jsonresult <> '':
             jsonresult += ',' + stra
         else:
