@@ -1,4 +1,5 @@
-create database qchelper
+--创建测试数据库
+--create database qchelper
 go
 use qchelper
 go
@@ -26,7 +27,9 @@ create table dbo.qmCheckPlan (
 	sCheckItemDesc varchar(max),
 	--QC检验人，指出该计划单分配给哪位QC
 	sQCUserID varchar(50),
-	sUserID varchar(50)
+	sUserID varchar(50),
+	--增加审核字段，1表示审核，0表示草稿。数据同步只同步状态为1的数据
+	bApproved bit
 )
 go
 --QC检验表，
@@ -47,21 +50,23 @@ create table dbo.qmCheckRecordMst (
 	datetime_rec datetime,
 	datetime_delete datetime,
 	datetime_upload datetime,
-	--对应的Adnroid上的检验
+	--Android上的检验记录主键ID
 	id_upload int,
-	--
+	--Android端上传的用户ID
 	user_id_opt int
 )
 go
---QC¼ìÑéÃ÷Ï¸£¬ºÍÉÏÃæµÄ±íÖ÷´Ó£¬ÊÇÎªÁË¶àÕÅÍ¼Æ¬µÄÉÏ´«
+--QC检验明细，主要用户存储检验图片，一个检验项目会对应多张检验图片
 if object_id('dbo.qmCheckRecordDtl') is not null
 	drop table dbo.qmCheckRecordDtl
 create table dbo.qmCheckRecordDtl (
 	iID int,
 	iMstID int,
-	--ÒòÎª¶ÀÁ¢µÄÍ¼Æ¬´«Êä£¬ËùÒÔÕâ¸ö×Ö¶ÎÓÃÓÚ¿ØÖÆÍ¼Æ¬µÄ´«ÊäÇé¿ö
+	--文件名称，该字段是用于同步文件时使用的，与业务没有关系。
+	--在同步数据时会在这里生成一个文件名称:用户ID+主表ID+当前记录ID.png
+	--在同步完数据后同步图片时会根据该名称将图片写到响应的bPhoto字段中
 	sFileName varchar(50),
-	--Í¼Æ¬´æ´¢×Ö¶Î£¬Ö±½Ó´æ´¢ÔÚÊý¾Ý¿âÖÐ
+	--用于存储图片，因为pyodbc的原因该字段只支持image类型
 	bPhoto image,
 	dCreateDate datetime,
 	datetime_delete datetime
@@ -69,23 +74,23 @@ create table dbo.qmCheckRecordDtl (
 go
 select * from dbo.users
 go
---Ä£ÄâÕÊºÅÊý¾Ý
+--插入测试用户
 insert into dbo.users
-select 1, 'test', '85786DB87A98DECD' --ÃÜÂë£º123
+select 1, 'test', '85786DB87A98DECD' --两次MD5加密，该密码为：123
 go
 select iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID from qmCheckPlan
 go
---Ä£ÄâQC¼Æ»®Êý¾Ý
+--插入测试数据
 insert into qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID)
-select 1, 12, 'SC010', 'QX7886', 'P0000001', '2012-11-22', '1£ºÃæÁÏ¡¢¸¨ÁÏÆ·ÖÊÓÅÁ¼£¬·ûºÏ¿Í»§ÒªÇó£»2£º¿îÊ½ÅäÉ«×¼È·ÎÞÎó£»3£º°ü×°ÃÀ¹Û¡¢Åä±ÈÕýÈ·¡£', '1', '1'
+select 1, 12, 'SC010', 'QX7886', 'P0000001', '2012-11-22', '1.产前检查 2.品质检查 3.包装检查', '1', '1'
 insert into qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID)
-select 2, 12, 'SC011', 'TX7001', 'P0000002', '2012-11-28', '1£ºÃæÁÏ¡¢¸¨ÁÏÆ·ÖÊÓÅÁ¼£¬·ûºÏ¿Í»§ÒªÇó£»2£ºË®Ï´É«ÀÎ¶È£»3£º°ü×°ÃÀ¹Û¡¢Åä±ÈÕýÈ·¡£', '1', '1'
+select 2, 12, 'SC011', 'TX7001', 'P0000002', '2012-11-28', '1.产前检查 2.品质检查 3.包装检查', '1', '1'
 insert into qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID)
-select 3, 18, 'SC011', 'YW0006', 'P0000003', '2012-11-30', '1¡¢¶ÔÉ«×¼È·£¬´ó»õ²¼µÄÑÕÉ«ºÍÈ·ÈÏÉ«µÄÉ«²îÖÁÉÙÓ¦ÔÚ3.5¼¶Ö®ÄÚ£¬²¢Ðè¾­¿Í»§È·ÈÏ; 2¡¢¿îÊ½ÅäÉ«×¼È·ÎÞÎó; 3¡¢°ü×°ÃÀ¹Û¡¢Åä±ÈÕýÈ·.', 'test', '1'
+select 3, 18, 'SC011', 'YW0006', 'P0000003', '2012-11-30', '1.产前检查 2.品质检查 3.包装检查', 'test', '1'
 insert into qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID)
-select 4, 12, 'SC012', 'QX1111', 'P0000004', '2012-12-08', '1£º²úÆ·¸É¾»¡¢Õû½à¡¢ÂôÏàºÃ£»2£º¿îÊ½ÅäÉ«×¼È·ÎÞÎó£»3£º°ü×°ÃÀ¹Û¡¢Åä±ÈÕýÈ·£»4£ºÃæÁÏ¡¢¸¨ÁÏÆ·ÖÊÓÅÁ¼£¬·ûºÏ¿Í»§ÒªÇó¡£', '1', '1'
+select 4, 12, 'SC012', 'QX1111', 'P0000004', '2012-12-08', '1.产前检查 2.品质检查 3.包装检查', '1', '1'
 insert into qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID)
-select 5, 20, 'SC012', 'UK1256', 'P0000005', '2012-12-12', '1¡¢²úÆ·¸É¾»¡¢Õû½à¡¢ÂôÏàºÃ; 2¡¢¿îÊ½ÅäÉ«×¼È·ÎÞÎó; 3¡¢°ü×°ÃÀ¹Û¡¢Åä±ÈÕýÈ·; 4¡¢Ë®Ï´É«ÀÎ¶È; 5¡¢ÃæÁÏ¡¢¸¨ÁÏÆ·ÖÊÓÅÁ¼£¬·ûºÏ¿Í»§ÒªÇó.', 'U001', '1'
+select 5, 20, 'SC012', 'UK1256', 'P0000005', '2012-12-12', '1.产前检查 2.品质检查 3.包装检查', 'U001', '1'
 insert into qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID)
-select 6, 22, 'SC022', 'LP6589', 'P0000006', '2012-12-22', '1¡¢ÃæÁÏ¡¢¸¨ÁÏÆ·ÖÊÓÅÁ¼£¬·ûºÏ¿Í»§ÒªÇó; 2¡¢¿îÊ½ÅäÉ«×¼È·ÎÞÎó; 3¡¢°ü×°ÃÀ¹Û¡¢Åä±ÈÕýÈ·.', 'U001', '1'
+select 6, 22, 'SC022', 'LP6589', 'P0000006', '2012-12-22', '1.产前检查 2.品质检查 3.包装检查', 'U001', '1'
 go

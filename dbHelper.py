@@ -5,6 +5,8 @@ import pyodbc
 import json
 import time
 
+# 数据交互
+
 def getConn():
     return pyodbc.connect('DRIVER={SQL Server};Server=.;DATABASE=qchelper;UID=qchelper;PWD=1qaz2wsx')
 
@@ -90,7 +92,7 @@ def uploadCheckRecord(masterDict, detailCount, detailDict):
         sql += "," + fieldisNull(detailDict[i]['dCreaimestamp'])
         sql += "," + fieldisNull(detailDict[i]['datetime_delete'])
         sql += ";\n"
-        
+    
     print(sql)
     sqlExcute(getConn(), sql)
 
