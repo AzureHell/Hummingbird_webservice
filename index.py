@@ -35,9 +35,9 @@ def checkUser():
     #print(username)
     #print(password)
     result = dbHelper.checkUser(username, password)
-    #print(result)
-    if result[1:6] == "error:":
-        str = fmtContent("", 1, 'failed', result[result.find(':'):])
+    print(result)
+    if result[0:6] == "error:":
+        str = fmtContent("", 'failed', result[result.find(':')+1:])
     else:
         str = fmtContent(result)
     print(str)
@@ -56,8 +56,8 @@ def downloadCheckPlan():
         abort(400, 'Bad request: Could not decode request body(expected JSON).')
     result = dbHelper.downloadCheckPlan(sQCUserID, iID)
     #print(result)
-    if result[1:6] == "error:":
-        str = fmtContent("", 1, 'failed', result[result.find(':'):])
+    if result[0:6] == "error:":
+        str = fmtContent("", 'failed', result[result.find(':')+1:])
     else:
         str = fmtContent(result)
     print(str)
@@ -78,8 +78,8 @@ def uploadCheckRecord():
         abort(400, 'Bad request: Could not decode request body(expected JSON).')
     result = dbHelper.uploadCheckRecord(masterDict, detailCount, detailDict)
     #print(result)
-    if result[1:6] == "error:":
-        str = fmtContent("", 1, 'failed', result[result.find(':'):])
+    if result[0:6] == "error:":
+        str = fmtContent("", 'failed', result[result.find(':')+1:])
     else:
         str = fmtContent(result)
     print(str)
@@ -101,8 +101,8 @@ def uploadCheckRecordPic():
     #print(type(raw))
     result = dbHelper.uploadCheckRecordPic(filename, raw)
     print(result)
-    if result[1:6] == "error:":
-        str = fmtContent("", 1, 'failed', result[result.find(':'):])
+    if result[0:6] == "error:":
+        str = fmtContent("", 'failed', result[result.find(':')+1:])
     else:
         str = fmtContent(result)
     print(str)
@@ -116,4 +116,4 @@ def showpic():
 def fmtContent(data, status='succeed', error=''):
     return '{"status":"'+status+'","error":"'+error+'","data":['+data+']}'
 
-run(port=8080, debug=True)
+run(host="192.168.100.102", port=8080, debug=True)

@@ -1,14 +1,30 @@
 #!/usr/local/bin/python
 # -*- coding: utf-8 -*-
 # Created on 2011-10-01
+import sys, time, json
+import re
 import pyodbc
-import json
-import time
 
 # 数据交互
 
+def get_db_type():
+    #return "mssql"
+    return "sqlite3"
+
+def changeSqlForDb(sql, **matchs):
+    # 替换当前选择的数据库位置的内容
+    sql = sql.replace("#"+get_db_type()+"#", matchs[get_db_type()])
+    # 替换其他数据库位置的内容为空白
+    db_type_re = re.compile("#[a-z]+#")
+    sql = db_type_re.sub("", sql)
+    # 返回
+    return sql
+
 def getConn():
-    return pyodbc.connect('DRIVER={SQL Server};Server=.;DATABASE=qchelper;UID=qchelper;PWD=1qaz2wsx')
+    if get_db_type() == "mssql":
+        return pyodbc.connect('DRIVER={SQL Server};Server=.;DATABASE=qchelper;UID=qchelper;PWD=1qaz2wsx;')
+    elif get_db_type() == "sqlite3":
+        return pyodbc.connect('DSN=qchelper;')
 
 def sqlQuery(conn, sql):
     cursor = conn.cursor()
@@ -25,32 +41,27 @@ def sqlExcute(conn, sql):
     conn.close()
     return 1
 
-
 def getInfo():
-    recSet = sqlQuery(getConn(), "select top 1 user_name, password from dbo.users")
-
-    print("中文".encode('utf8'))
+    rec_set = sqlQuery(getConn(), changeSqlForDb("select #mssql# user_name, password from users #sqlite3#", mssql="top 1", sqlite3="limit 1"))
     
-    for recOne in recSet:
-        return recOne[0] + " : " + recOne[1] + ',defaultencoding:' + sys.getdefaultencoding()
+    for rec_one in rec_set:
+        return rec_one[0] + " : " + rec_one[1] + ',defaultencoding:' + sys.getdefaultencoding()
 
 def checkUser(username, password):
-    recSet = sqlQuery(getConn(), "select top 1 user_id,user_name from dbo.users where user_name = '%s' and password = '%s'"%(username, password))    
-    if recSet.count > 0:
-        #1 rows only
-        for recOne in recSet:
-            return '{"user_id":"'+str(recOne.user_id)+'","user_name":"'+recOne.user_name+'"}'
-    else:
-        return 'error:not return count!'
+    sql = changeSqlForDb("select #mssql# user_id,user_name from users where user_name = '%s' and password = '%s' #sqlite3#"%(username, password), mssql="top 1", sqlite3="limit 1")
+    rec_set = sqlQuery(getConn(), sql)
+    for rec_one in rec_set:
+        return '{"user_id":"'+str(rec_one.user_id)+'","user_name":"'+rec_one.user_name+'"}'
+    return 'error:not return count!'
 
 def downloadCheckPlan(sQCUserID, iID):
     jsonresult = ''
     record_count = 0
     sql = "select iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID from qmCheckPlan where sQCUserID = '%s' and iID > %s and bApproved = 1"%(sQCUserID, iID)
-    recSet = sqlQuery(getConn(), sql)
-    for recOne in recSet:
-        stra = '{"iID":"'+str(recOne.iID)+'","iFactoryID":"'+str(recOne.iFactoryID)+'","sOrderNo":"'+recOne.sOrderNo+'","sStyleNo":"'+recOne.sStyleNo+'","sProductID":"' \
-            +recOne.sProductID+'","dRequestCheck":"'+str(recOne.dRequestCheck)+'","sCheckItemDesc":"'+recOne.sCheckItemDesc.decode( "GB2312")+'","sQCUserID":"'+str(recOne.sQCUserID)+'","sUserID":"'+str(recOne.sUserID)+'","bApproved":"'+str(recOne.bApproved)+'"}'
+    rec_set = sqlQuery(getConn(), sql)
+    for rec_one in rec_set:
+        stra = '{"iID":"'+str(rec_one.iID)+'","iFactoryID":"'+str(rec_one.iFactoryID)+'","sOrderNo":"'+rec_one.sOrderNo+'","sStyleNo":"'+rec_one.sStyleNo+'","sProductID":"' \
+            +rec_one.sProductID+'","dRequestCheck":"'+str(rec_one.dRequestCheck)+'","sCheckItemDesc":"'+rec_one.sCheckItemDesc.decode( "GB2312")+'","sQCUserID":"'+str(rec_one.sQCUserID)+'","sUserID":"'+str(rec_one.sUserID)+'","bApproved":"'+str(rec_one.bApproved)+'"}'
         if jsonresult <> '':
             jsonresult += ',' + stra
         else:
@@ -66,10 +77,10 @@ def fieldisNull(x):
         return "'" + x + "'"
 
 def uploadCheckRecord(masterDict, detailCount, detailDict):
-    sql = "declare @MstID table (iMstID int);\n"
-    sql += "insert into [dbo].[qmCheckRecordMst](iFactoryID, sOrderNo, sStyleNo, sProductID "
+    sql = ""
+    sql += "insert into qmCheckRecordMst(iFactoryID, sOrderNo, sStyleNo, sProductID "
     sql += ", iItemID, dChecdedDate, sRemark, datetime_rec, datetime_delete, datetime_upload, id_upload, user_id_opt "
-    sql += ") output inserted.iID into @MstID \n"
+    sql += ") \n"
     sql += "select " + fieldisNull(masterDict[0]['iFactoryID'])
     sql += "," + fieldisNull(masterDict[0]['sOrderNo'])
     sql += "," + fieldisNull(masterDict[0]['sStyleNo'])
@@ -85,9 +96,12 @@ def uploadCheckRecord(masterDict, detailCount, detailDict):
     sql += ";\n"
     
     for i in range(0, detailCount):
-        sql += "insert into [dbo].[qmCheckRecordDtl](iID, iMstID, sFileName, dCreateDate, datetime_delete) \n "
+        sql += "insert into qmCheckRecordDtl(iID, iMstID, sFileName, dCreateDate, datetime_delete) \n "
         sql += "select " + fieldisNull(detailDict[i]['iID'])
-        sql += ", (select top 1 iMstID from @MstID) as iMstID "
+        sql += ", (select max(iId) from qmCheckRecordMst "
+        sql += " where id_upload = "+fieldisNull(masterDict[0]['iID'])
+        sql += " and user_id_opt = "+fieldisNull(masterDict[0]['user_id_opt'])
+        sql += " ) as iMstID "
         sql += "," + fieldisNull(detailDict[i]['sFileName'])
         sql += "," + fieldisNull(detailDict[i]['dCreaimestamp'])
         sql += "," + fieldisNull(detailDict[i]['datetime_delete'])
@@ -96,14 +110,15 @@ def uploadCheckRecord(masterDict, detailCount, detailDict):
     print(sql)
     sqlExcute(getConn(), sql)
 
-    sql = "select top 1 id_upload, user_id_opt, datetime_upload from dbo.qmCheckRecordMst with(nolock) \n"
+    sql = "select #mssql# id_upload, user_id_opt, datetime_upload from qmCheckRecordMst \n"
     sql += " where user_id_opt = " + masterDict[0]["user_id_opt"]
     sql += " and id_upload = " + masterDict[0]["iID"]
-    sql += " order by datetime_upload desc;\n"
+    sql += " order by datetime_upload desc #sqlite3# ;\n"
+    sql = changeSqlForDb(sql, mssql = "top 1", sqlite3 = "limit 1")
     print(sql)
-    recSet = sqlQuery(getConn(), sql)
-    for recOne in recSet:
-        result = '{"iID":"' + str(recOne.id_upload) + '", "user_id_opt":"' + str(recOne.user_id_opt) + '", "datetime_upload":"' + str(recOne.datetime_upload) + '"}'
+    rec_set = sqlQuery(getConn(), sql)
+    for rec_one in rec_set:
+        result = '{"iID":"' + str(rec_one.id_upload) + '", "user_id_opt":"' + str(rec_one.user_id_opt) + '", "datetime_upload":"' + str(rec_one.datetime_upload) + '"}'
         result = '{"table":"qmCheckRecordMst","count":"1","records":['+result+']}'
     return result
 
@@ -111,7 +126,7 @@ def uploadCheckRecordPic(fileName, raw):
     con = getConn()
     cur = con.cursor()
 
-    sql = "update [dbo].[qmCheckRecordDtl] set bPhoto = ?, sFileName = sFileName + '.finished' where sFileName = ?"
+    sql = "update qmCheckRecordDtl set bPhoto = ?, sFileName = sFileName + '.finished' where sFileName = ?"
     cur.execute(sql, (pyodbc.Binary(raw),fileName))
     con.commit()
     con.close()
@@ -122,7 +137,8 @@ def showPic():
     con = getConn()
     cur = con.cursor()
 
-    sql = "select top 1 bPhoto from dbo.qmCheckRecordDtl with(nolock)"
+    sql = "select #mssql# bPhoto from qmCheckRecordDtl #sqlite3#"
+    sql = changeSqlForDb(sql, mssql = "top 1", sqlite3 = "limit 1")
     cur.execute(sql)
     x = cur.fetchall()
     for r in x:
