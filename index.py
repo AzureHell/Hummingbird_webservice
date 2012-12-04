@@ -28,7 +28,7 @@ def checkUser():
     try:
         #1 rows only
         if content['status'] == 'succeed':
-            username = content['data'][0]['username']
+            username = content['data'][0]['user_id']
             password = content['data'][0]['password']
     except ValueError:
         abort(400, 'Bad request: Could not decode request body(expected JSON).')
@@ -116,4 +116,4 @@ def showpic():
 def fmtContent(data, status='succeed', error=''):
     return '{"status":"'+status+'","error":"'+error+'","data":['+data+']}'
 
-run(host="192.168.100.102", port=8080, debug=True)
+run(host="192.168.100.101", port=8080, debug=True)
