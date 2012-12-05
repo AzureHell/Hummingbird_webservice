@@ -69,7 +69,7 @@ create table dbo.qmCheckRecordDtl (
     --文件名称，该字段是用于同步文件时使用的，与业务没有关系.
     --在同步数据时会在这里生成一个文件名称:用户ID+主表ID+当前记录ID.png.
     --在同步完数据后同步图片时会根据该名称将图片写到响应的bPhoto字段中.
-    sFileName varchar(50),
+    sFileName varchar(100),
     --用于存储图片，因为pyodbc的原因该字段只支持image类型.
     bPhoto image,
     dCreateDate datetime,
@@ -83,7 +83,7 @@ go
 --插入测试数据.
 insert into dbo.qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID, bApproved)
 select 1, 12, 'SC010', 'QX7886', 'P0000001', '2012-11-22', '1.产前检查 2.品质检查 3.包装检查', 'test', 'test', 1
-insert into dbo.dbo.qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID, bApproved)
+insert into dbo.qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID, bApproved)
 select 2, 12, 'SC011', 'TX7001', 'P0000002', '2012-11-28', '1.产前检查 2.品质检查 3.包装检查', 'test', 'test', 1
 insert into dbo.qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID, bApproved)
 select 3, 18, 'SC011', 'YW0006', 'P0000003', '2012-11-30', '1.产前检查 2.品质检查 3.包装检查', 'test2', 'test', 1

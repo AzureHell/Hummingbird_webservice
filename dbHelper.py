@@ -23,8 +23,8 @@ def changeSqlForDb(sql, **matchs):
 def getConn():
     if get_db_type() == "mssql":
         #return pyodbc.connect('DSN=qchelper;UID=sa;PWD=123;')
-        return pyodbc.connect('DRIVER={mssql};Server=192.168.56.101,1433;DATABASE=qchelper;UID=sa;PWD=123;TDS_Version=8.0')
-        #return pyodbc.connect('DRIVER={SQL Server};Server=192.168.56.101,1433;DATABASE=qchelper;UID=qchelper;PWD=1qaz2wsx;')
+        #return pyodbc.connect('DRIVER={mssql};Server=192.168.56.101,1433;DATABASE=qchelper;UID=sa;PWD=123;TDS_Version=8.0')
+        return pyodbc.connect('DRIVER={SQL Server};Server=.;DATABASE=qchelper;UID=qchelper;PWD=1qaz2wsx;')
     elif get_db_type() == "sqlite3":
         return pyodbc.connect('DSN=qchelper;')
 
@@ -134,8 +134,6 @@ def uploadCheckRecordPic(fileName, raw):
     con = getConn()
     cur = con.cursor()
 
-    sql = "set textsize 4094967294"
-    cur.execute(sql)
     sql = "update qmCheckRecordDtl set bPhoto = ?, sFileName = sFileName + '.finished' where sFileName = ?"
     cur.execute(sql, (pyodbc.Binary(raw),fileName))
     con.commit()
