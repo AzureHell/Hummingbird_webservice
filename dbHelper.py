@@ -54,14 +54,14 @@ def checkUser(username, password):
     rec_set = sqlQuery(getConn(), sql)
     for rec_one in rec_set:
         if rec_one.sPasswordMD5 == None:
-            return 'error:password null!'
-        return '{"user_id":"'+str(rec_one.user_id)+'","user_name":"'+rec_one.user_name+'"}'
+            return 'error:password is null!'
+        return '{"user_id":"'+str(rec_one.sUserID)+'","user_name":"'+rec_one.sUserName+'"}'
     return 'error:not record!'
 
 def downloadCheckPlan(sQCUserID, iID):
     jsonresult = ''
     record_count = 0
-    sql = "select iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID, bApproved from qmCheckPlan where sQCUserID = '%s' and iID >= %s and bApproved = 1"%(sQCUserID, iID)
+    sql = "select iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID, bApproved from qmCheckPlan where sQCUserID = '%s' and iID > %s and bApproved = 1"%(sQCUserID, iID)
     rec_set = sqlQuery(getConn(), sql)
     for rec_one in rec_set:
         stra = '{"iID":"'+str(rec_one.iID)+'","iFactoryID":"'+str(rec_one.iFactoryID)+'","sOrderNo":"'+rec_one.sOrderNo+'","sStyleNo":"'+rec_one.sStyleNo+'","sProductID":"' \
@@ -79,7 +79,7 @@ def downloadCheckPlan(sQCUserID, iID):
     return jsonresult
 
 def fieldisNull(x):
-    if x == "'null'":
+    if x == "null":
         return x
     else:
         return "'" + x + "'"
@@ -104,7 +104,7 @@ def uploadCheckRecord(masterDict, detailCount, detailDict):
     sql += ";"
 
     for i in range(0, detailCount):
-        sql += "insert into qmCheckRecordDtl(iID, iMstID, sFileName, dCreateDate, datetime_delete) "
+        sql += "insert into qmCheckRecordDtl(iID, iMstID, sFileName, dCreateDate, datetime_delete)"
         sql += "select " + fieldisNull(detailDict[i]['iID'])
         sql += ", (select max(iId) from qmCheckRecordMst "
         sql += " where id_upload = "+fieldisNull(masterDict[0]['iID'])
@@ -119,9 +119,9 @@ def uploadCheckRecord(masterDict, detailCount, detailDict):
     sqlExcute(getConn(), sql)
 
     sql = "select #mssql# id_upload, user_id_by_upload, datetime_upload from qmCheckRecordMst "
-    sql += " where user_id_by_upload = " + masterDict[0]["user_id_by_upload"]
-    sql += " and id_upload = " + masterDict[0]["iID"]
-    sql += " order by datetime_upload desc #sqlite3# ;"
+    sql += " where user_id_by_upload = '" + masterDict[0]["user_id_by_upload"]
+    sql += "' and id_upload = '" + masterDict[0]["iID"]
+    sql += "' order by datetime_upload desc #sqlite3# ;"
     sql = changeSqlForDb(sql, mssql = "top 1", sqlite3 = "limit 1")
     print(sql)
     rec_set = sqlQuery(getConn(), sql)
@@ -134,6 +134,8 @@ def uploadCheckRecordPic(fileName, raw):
     con = getConn()
     cur = con.cursor()
 
+    sql = "set textsize 4094967294"
+    cur.execute(sql)
     sql = "update qmCheckRecordDtl set bPhoto = ?, sFileName = sFileName + '.finished' where sFileName = ?"
     cur.execute(sql, (pyodbc.Binary(raw),fileName))
     con.commit()
