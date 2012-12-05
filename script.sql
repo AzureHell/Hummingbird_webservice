@@ -78,7 +78,7 @@ create table dbo.qmCheckRecordDtl (
 go
 --插入测试用户.
 insert into dbo.smUser
-select 'test', 'test_user', '85786DB87A98DECD'; --两次MD5加密，该密码为：123.
+select 'test', 'test_user', 'A78384E55267725D'; --两次MD5加密，该密码为：123.
 go
 --插入测试数据.
 insert into dbo.qmCheckPlan(iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID, bApproved)

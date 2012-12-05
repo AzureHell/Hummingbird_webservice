@@ -55,7 +55,8 @@ def checkUser(username, password):
     for rec_one in rec_set:
         if rec_one.sPasswordMD5 == None:
             return 'error:password is null!'
-        return '{"user_id":"'+str(rec_one.sUserID)+'","user_name":"'+rec_one.sUserName+'"}'
+        elif rec_one.sPasswordMD5 == password:
+            return '{"user_id":"'+str(rec_one.sUserID)+'","user_name":"'+rec_one.sUserName+'"}'
     return 'error:not record!'
 
 def downloadCheckPlan(sQCUserID, iID):
