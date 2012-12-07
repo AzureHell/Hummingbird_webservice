@@ -66,8 +66,8 @@ def downloadCheckPlan(sQCUserID, iID):
     rec_set = sqlQuery(getConn(), sql)
     for rec_one in rec_set:
         stra = '{"iID":"'+str(rec_one.iID)+'","iFactoryID":"'+str(rec_one.iFactoryID)+'","sOrderNo":"'+rec_one.sOrderNo+'","sStyleNo":"'+rec_one.sStyleNo+'","sProductID":"' \
-            #+rec_one.sProductID+'","dRequestCheck":"'+str(rec_one.dRequestCheck)+'","sCheckItemDesc":"'+rec_one.sCheckItemDesc+'","sQCUserID":"'+str(rec_one.sQCUserID)+'","sUserID":"'+str(rec_one.sUserID)+'","bApproved":"'+str(rec_one.bApproved)+'"}'
             +rec_one.sProductID+'","dRequestCheck":"'+str(rec_one.dRequestCheck)+'","sCheckItemDesc":"'+rec_one.sCheckItemDesc.decode( "GB2312")+'","sQCUserID":"'+str(rec_one.sQCUserID)+'","sUserID":"'+str(rec_one.sUserID)+'","bApproved":"'+str(rec_one.bApproved)+'"}'
+            #+rec_one.sProductID+'","dRequestCheck":"'+str(rec_one.dRequestCheck)+'","sCheckItemDesc":"'+rec_one.sCheckItemDesc+'","sQCUserID":"'+str(rec_one.sQCUserID)+'","sUserID":"'+str(rec_one.sUserID)+'","bApproved":"'+str(rec_one.bApproved)+'"}'
         if jsonresult <> '':
             jsonresult += ',' + stra
         else:
