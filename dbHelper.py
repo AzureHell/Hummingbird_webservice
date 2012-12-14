@@ -1,10 +1,13 @@
-#!/usr/local/bin/python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
-# Created on 2011-10-01
+
 import sys, time, json
 import re
 import pyodbc
+import chardet
+import locale, codecs
 
+locale.setlocale(locale.LC_ALL,"en_US.UTF-8")
 # 数据交互
 
 def get_db_type():
@@ -23,8 +26,8 @@ def changeSqlForDb(sql, **matchs):
 def getConn():
     if get_db_type() == "mssql":
         #return pyodbc.connect('DSN=qchelper;UID=sa;PWD=123;')
-        #return pyodbc.connect('DRIVER={mssql};Server=192.168.56.101,1433;DATABASE=qchelper;UID=sa;PWD=123;TDS_Version=8.0')
-        return pyodbc.connect('DRIVER={SQL Server};Server=.;DATABASE=qchelper;UID=qchelper;PWD=1qaz2wsx;')
+        return pyodbc.connect('DRIVER={mssql};Server=192.168.56.101,1433;DATABASE=qchelper;UID=sa;PWD=123;TDS_Version=8.0;CHARSET=UTF8;')
+        #return pyodbc.connect('DRIVER={SQL Server};Server=.;DATABASE=qchelper;UID=qchelper;PWD=1qaz2wsx;')
     elif get_db_type() == "sqlite3":
         return pyodbc.connect('DSN=qchelper;')
 
@@ -44,30 +47,31 @@ def sqlExcute(conn, sql):
     return 1
 
 def getInfo():
-    rec_set = sqlQuery(getConn(), changeSqlForDb("select #mssql# sUserID, sUserName, sPasswordMD5 from smUser #sqlite3#", mssql="top 1", sqlite3="limit 1"))
+    rows = sqlQuery(getConn(), changeSqlForDb("select #mssql# sUserID, sUserName, sPasswordMD5 from smUser #sqlite3#", mssql="top 1", sqlite3="limit 1"))
     
-    for rec_one in rec_set:
-        return rec_one[0] + " : " + rec_one[1] + ',defaultencoding:' + sys.getdefaultencoding()
+    for row in rows:
+        return row[0] + " : " + row[1] + ',defaultencoding:' + sys.getdefaultencoding()
 
 def checkUser(username, password):
     sql = changeSqlForDb("select #mssql# sUserID, sUserName, sPasswordMD5 from smUser where sUserID = '%s' #sqlite3#"%(username), mssql="top 1", sqlite3="limit 1")
-    rec_set = sqlQuery(getConn(), sql)
-    for rec_one in rec_set:
-        if rec_one.sPasswordMD5 == None:
+    rows = sqlQuery(getConn(), sql)
+    for row in rows:
+        if row.sPasswordMD5 == None:
             return 'error:password is null!'
-        elif rec_one.sPasswordMD5 == password:
-            return '{"user_id":"'+str(rec_one.sUserID)+'","user_name":"'+rec_one.sUserName+'"}'
+        elif row.sPasswordMD5 == password:
+            return '{"user_id":"'+str(row.sUserID)+'","user_name":"'+row.sUserName+'"}'
     return 'error:not record!'
 
 def downloadCheckPlan(sQCUserID, iID):
     jsonresult = ''
     record_count = 0
     sql = "select iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID, bApproved from qmCheckPlan where sQCUserID = '%s' and iID > %s and bApproved = 1"%(sQCUserID, iID)
-    rec_set = sqlQuery(getConn(), sql)
-    for rec_one in rec_set:
-        stra = '{"iID":"'+str(rec_one.iID)+'","iFactoryID":"'+str(rec_one.iFactoryID)+'","sOrderNo":"'+rec_one.sOrderNo+'","sStyleNo":"'+rec_one.sStyleNo+'","sProductID":"' \
-            +rec_one.sProductID+'","dRequestCheck":"'+str(rec_one.dRequestCheck)+'","sCheckItemDesc":"'+rec_one.sCheckItemDesc.decode( "GB2312")+'","sQCUserID":"'+str(rec_one.sQCUserID)+'","sUserID":"'+str(rec_one.sUserID)+'","bApproved":"'+str(rec_one.bApproved)+'"}'
-            #+rec_one.sProductID+'","dRequestCheck":"'+str(rec_one.dRequestCheck)+'","sCheckItemDesc":"'+rec_one.sCheckItemDesc+'","sQCUserID":"'+str(rec_one.sQCUserID)+'","sUserID":"'+str(rec_one.sUserID)+'","bApproved":"'+str(rec_one.bApproved)+'"}'
+    rows = sqlQuery(getConn(), sql)
+    for row in rows:
+        #临时用这种方法处理下
+        sCheckItemDesc = row.sCheckItemDesc[:row.sCheckItemDesc.find(u'\x00')]
+        stra = '{"iID":"'+str(row.iID)+'","iFactoryID":"'+str(row.iFactoryID)+'","sOrderNo":"'+row.sOrderNo+'","sStyleNo":"'+row.sStyleNo+'","sProductID":"' \
+            +row.sProductID+'","dRequestCheck":"'+str(row.dRequestCheck)+'","sCheckItemDesc":"'+sCheckItemDesc+'","sQCUserID":"'+str(row.sQCUserID)+'","sUserID":"'+str(row.sUserID)+'","bApproved":"'+str(row.bApproved)+'"}'
         if jsonresult <> '':
             jsonresult += ',' + stra
         else:
@@ -86,61 +90,127 @@ def fieldisNull(x):
         return "'" + x + "'"
 
 def uploadCheckRecord(masterDict, detailCount, detailDict):
-    sql = ""
+    # sql = ""
+    # sql += "merge qmCheckRecordMst as t "
+    # sql += "using (select " + fieldisNull(masterDict[0]['iFactoryID'])
+    # sql += " iFactoryID," + fieldisNull(masterDict[0]['sOrderNo'])
+    # sql += " sOrderNo," + fieldisNull(masterDict[0]['sStyleNo'])
+    # sql += " sStyleNo," + fieldisNull(masterDict[0]['sProductID'])
+    # sql += " sProductID," + fieldisNull(masterDict[0]['iItemID'])
+    # sql += " iItemID," + fieldisNull(masterDict[0]['dCheckedDate'])
+    # sql += " dCheckedDate," + fieldisNull(masterDict[0]['sRemark'])
+    # sql += " sRemark," + fieldisNull(masterDict[0]['sUserID'])
+    # sql += " sUserID," + fieldisNull(masterDict[0]['datetime_rec'])
+    # sql += " datetime_rec," + fieldisNull(masterDict[0]['datetime_modify'])
+    # sql += " datetime_modify," + fieldisNull(masterDict[0]['datetime_delete'])
+    # sql += " datetime_delete," + fieldisNull(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+    # sql += " datetime_upload," + fieldisNull(masterDict[0]['uMobileKey'])
+    # sql += " uMobileKey "
+    # sql += " ) as s (iFactoryID,sOrderNo,sStyleNo,sProductID,iItemID,dCheckedDate,sRemark,sUserID,datetime_rec,datetime_modify,datetime_delete,datetime_upload,uMobileKey) "
+    # sql += " on s.uMobileKey = t.uMobileKey "
+    # sql += "when matched then "
+    # sql += " update set t.dCheckedDate = s.dCheckedDate, t.sRemark = s.sRemark, t.datetime_modify = s.datetime_modify, t.datetime_delete = s.datetime_delete, t.datetime_upload = s.datetime_upload "
+    # sql += "when not matched then "
+    # sql += " insert (iFactoryID, sOrderNo, sStyleNo, sProductID, iItemID, dCheckedDate, sRemark, sUserID, datetime_rec, datetime_modify, datetime_delete, datetime_upload, uMobileKey) "
+    # sql += " values (s.iFactoryID, s.sOrderNo, s.sStyleNo, s.sProductID, s.iItemID, s.dCheckedDate, s.sRemark, s.sUserID, s.datetime_rec, s.datetime_modify, s.datetime_delete, s.datetime_upload, s.uMobileKey) "
+    # sql += ";"
+
+    sql = "if not exists (select top 1 1 from qmCheckRecordMst where uMobileKey = " + fieldisNull(masterDict[0]['uMobileKey']) + ") "
     sql += "insert into qmCheckRecordMst(iFactoryID, sOrderNo, sStyleNo, sProductID "
-    sql += ", iItemID, dChecdedDate, sRemark, datetime_rec, datetime_delete, datetime_upload, id_upload, user_id_by_upload "
+    sql += ", iItemID, dCheckedDate, sRemark, sUserID, datetime_rec, datetime_modify, datetime_delete, datetime_upload, uMobileKey "
     sql += ") "
     sql += "select " + fieldisNull(masterDict[0]['iFactoryID'])
     sql += "," + fieldisNull(masterDict[0]['sOrderNo'])
     sql += "," + fieldisNull(masterDict[0]['sStyleNo'])
     sql += "," + fieldisNull(masterDict[0]['sProductID'])
     sql += "," + fieldisNull(masterDict[0]['iItemID'])
-    sql += "," + fieldisNull(masterDict[0]['dChecdedDate'])
+    sql += "," + fieldisNull(masterDict[0]['dCheckedDate'])
     sql += "," + fieldisNull(masterDict[0]['sRemark'])
+    sql += "," + fieldisNull(masterDict[0]['sUserID'])
     sql += "," + fieldisNull(masterDict[0]['datetime_rec'])
+    sql += "," + fieldisNull(masterDict[0]['datetime_modify'])
     sql += "," + fieldisNull(masterDict[0]['datetime_delete'])
     sql += "," + fieldisNull(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-    sql += "," + fieldisNull(masterDict[0]['iID'])
-    sql += "," + fieldisNull(masterDict[0]['user_id_by_upload'])
+    sql += "," + fieldisNull(masterDict[0]['uMobileKey'])
+    sql += " else update qmCheckRecordMst set " 
+    sql += " dCheckedDate = " + fieldisNull(masterDict[0]['dCheckedDate'])
+    sql += ",sRemark = " + fieldisNull(masterDict[0]['sRemark'])
+    sql += ",datetime_modify = " + fieldisNull(masterDict[0]['datetime_modify'])
+    sql += ",datetime_delete = " + fieldisNull(masterDict[0]['datetime_delete'])
+    sql += ",datetime_upload = " + fieldisNull(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+    sql += " where uMobileKey = " + fieldisNull(masterDict[0]['uMobileKey'])
     sql += ";"
 
     for i in range(0, detailCount):
-        sql += "insert into qmCheckRecordDtl(iID, iMstID, sFileName, dCreateDate, datetime_delete)"
-        sql += "select " + fieldisNull(detailDict[i]['iID'])
-        sql += ", (select max(iId) from qmCheckRecordMst "
-        sql += " where id_upload = "+fieldisNull(masterDict[0]['iID'])
-        sql += " and user_id_by_upload = "+fieldisNull(masterDict[0]['user_id_by_upload'])
-        sql += " ) as iMstID "
-        sql += "," + fieldisNull(detailDict[i]['sFileName'])
-        sql += "," + fieldisNull(detailDict[i]['dCreaimestamp'])
+        # sql += "merge qmCheckRecordDtl as t "
+        # sql += "using (select isnull((select max(iId) from qmCheckRecordMst where uMobileKey = "+fieldisNull(masterDict[0]['uMobileKey'])
+        # sql += " ), 0) as iMstID "
+        # sql += " ," + fieldisNull(detailDict[i]['dCreateDate'])
+        # sql += " ," + fieldisNull(detailDict[i]['datetime_modify'])
+        # sql += " ," + fieldisNull(detailDict[i]['datetime_delete'])
+        # sql += " ," + fieldisNull(detailDict[i]['uMobileKey'])
+        # sql += " ) as s (iMstID,dCreateDate,datetime_modify,datetime_delete,uMobileKey) "
+        # sql += " on s.uMobileKey = t.uMobileKey "
+        # sql += "when matched then "
+        # sql += " update set t.datetime_modify = s.datetime_modify, t.datetime_delete = s.datetime_delete "
+        # sql += "when not matched then "
+        # sql += " insert (iMstID, dCreateDate, datetime_modify, datetime_delete, uMobileKey) "
+        # sql += " values (s.iMstID, s.dCreateDate, s.datetime_modify, s.datetime_delete, s.uMobileKey) "
+        # sql += ";"
+        sql += "if not exists (select top 1 1 from qmCheckRecordDtl where uMobileKey = " + fieldisNull(detailDict[i]['uMobileKey']) + ") "
+        sql += "insert into qmCheckRecordDtl(iMstID, dCreateDate, datetime_modify, datetime_delete, uMobileKey)"
+        sql += "select isnull((select max(iId) from qmCheckRecordMst where uMobileKey = "+fieldisNull(masterDict[0]['uMobileKey'])
+        sql += " ), 0) as iMstID "
+        sql += "," + fieldisNull(detailDict[i]['dCreateDate'])
+        sql += "," + fieldisNull(detailDict[i]['datetime_modify'])
         sql += "," + fieldisNull(detailDict[i]['datetime_delete'])
+        sql += "," + fieldisNull(detailDict[i]['uMobileKey'])
+        sql += " else update qmCheckRecordDtl set "
+        sql += " datetime_modify = " + fieldisNull(detailDict[i]['datetime_modify'])
+        sql += ",datetime_delete = " + fieldisNull(detailDict[i]['datetime_delete'])
+        sql += " where uMobileKey = " + fieldisNull(detailDict[i]['uMobileKey'])
         sql += ";"
 
     print(sql)
-    sqlExcute(getConn(), sql)
+    sqlExcute(getConn(), sql.encode('utf-8'))
 
-    sql = "select #mssql# id_upload, user_id_by_upload, datetime_upload from qmCheckRecordMst "
-    sql += " where user_id_by_upload = '" + masterDict[0]["user_id_by_upload"]
-    sql += "' and id_upload = '" + masterDict[0]["iID"]
-    sql += "' order by datetime_upload desc #sqlite3# ;"
+    sql = ""
+    sql += "select #mssql# datetime_upload from qmCheckRecordMst "
+    sql += " where uMobileKey = '" + masterDict[0]["uMobileKey"] + "' #sqlite3# ;"
     sql = changeSqlForDb(sql, mssql = "top 1", sqlite3 = "limit 1")
     print(sql)
-    rec_set = sqlQuery(getConn(), sql)
-    for rec_one in rec_set:
-        result = '{"iID":"' + str(rec_one.id_upload) + '", "user_id_by_upload":"' + str(rec_one.user_id_by_upload) + '", "datetime_upload":"' + str(rec_one.datetime_upload) + '"}'
-        result = '{"table":"qmCheckRecordMst","count":"1","records":['+result+']}'
+    rows = sqlQuery(getConn(), sql.encode('utf-8'))
+    #只有一条记录
+    record_string = ""
+    record_count = 0
+    for row in rows:
+        record_string += '{"uMobileKey":"' + str(masterDict[0]["uMobileKey"]) + '", "datetime_upload":"' + str(row.datetime_upload) + '"}'
+        record_count += 1
+    result = '{"table":"qmCheckRecordMst","count":"' + str(record_count) + '","records":['+record_string+']}'
     return result
 
-def uploadCheckRecordPic(fileName, raw):
-    con = getConn()
-    cur = con.cursor()
-
-    sql = "update qmCheckRecordDtl set bPhoto = ?, sFileName = sFileName + '.finished' where sFileName = ?"
-    cur.execute(sql, (pyodbc.Binary(raw),fileName))
-    con.commit()
-    con.close()
-
+def uploadCheckRecordPic(key, raw):
+    if uploadPic("qmCheckRecordDtl", "bPhoto", "uMobileKey", key, raw):
+        return "{}"
     return "{}"
+
+'''
+统一的图片上传函数，只支持插入到表中的image字段，其他字段类型会报错
+'''
+def uploadPic(table_name, field_name, key_name, key, raw):
+    try:
+        con = getConn()
+        cur = con.cursor()
+        sql = "update " + table_name + " set " + field_name + " = ? where " + key_name + " = ?"
+        cur.execute(sql, (pyodbc.Binary(raw), key))
+    except Exception, e:
+        raise e
+        return false
+    finally:
+        con.commit()
+        con.close()
+
+    return True
 
 def showPic():
     con = getConn()
@@ -154,5 +224,24 @@ def showPic():
         return r.bPhoto
     con.close()
 
+def test():
+    sql = "select iID, iFactoryID, sOrderNo, sStyleNo, sProductID, dRequestCheck, sCheckItemDesc, sQCUserID, sUserID, bApproved from qmCheckPlan"
+    rows = sqlQuery(getConn(), sql)
+
+    a = '你'
+
+    print 'defaultencoding:' + sys.getdefaultencoding()
+    print locale.getlocale()
+
+    for row in rows:
+        print chardet.detect(a)
+        print repr(a)
+        
+        print chardet.detect(row.sCheckItemDesc)
+        print repr(row.sCheckItemDesc)
+        print row.sCheckItemDesc[:row.sCheckItemDesc.find(u'\x00')]
+        #print row.sCheckItemDesc.decode('utf-8', 'ignore')
+        
+
 if __name__ == "__main__":
-    print(getInfo())
+    test()

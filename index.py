@@ -1,6 +1,6 @@
-#!/usr/local/bin/python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
-## Created on 2011-10-01
+
 from bottle import route, run, get, post, request, response
 import dbHelper
 import json
@@ -70,10 +70,15 @@ def uploadCheckRecord():
     print(content)
     try:
         if content['status'] == 'succeed':
-            masterDict = content['data'][0]['records']
+            if len(content['data']) > 0:
+                masterDict = content['data'][0]['records']
             #这里需要判断是否存在[1]的数据
-            detailCount = int(content['data'][1]['count'])
-            detailDict = content['data'][1]['records']
+            if len(content['data']) > 1:
+                detailCount = int(content['data'][1]['count'])
+                detailDict = content['data'][1]['records']
+            else:
+                detailCount = 0
+                detailDict = {}
     except ValueError:
         abort(400, 'Bad request: Could not decode request body(expected JSON).')
     result = dbHelper.uploadCheckRecord(masterDict, detailCount, detailDict)
@@ -93,13 +98,13 @@ def uploadCheckRecordPic():
     if data is not None:
         print('ok')
         raw = data.file.read() # This is dangerous for big files
-        filename = data.filename
+        key = data.filename
 
-    print('filename: ' + filename)
+    print('key: ' + key)
     filesize = len(raw)
     print(filesize)
     #print(type(raw))
-    result = dbHelper.uploadCheckRecordPic(filename, raw)
+    result = dbHelper.uploadCheckRecordPic(key, raw)
     print(result)
     if result[0:6] == "error:":
         str = fmtContent("", 'failed', result[result.find(':')+1:])

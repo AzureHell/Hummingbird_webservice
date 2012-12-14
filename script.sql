@@ -48,23 +48,27 @@ create table dbo.qmCheckRecordMst (
     --检验项目编号.
     iItemID int,
     --填写的检验时间.
-    dChecdedDate datetime,
+    dCheckedDate datetime,
     --检验总结.
     sRemark varchar(500),
+    sUserID varchar(50),
     datetime_rec datetime,
+    datetime_modify datetime,
     datetime_delete datetime,
+    --记录上传到服务器的时间，如果在移动端进行了数据修改会将这个字段置为NULL，同步时对所有为NULL字段进行同步
     datetime_upload datetime,
-    --Android上的检验记录主键ID.
-    id_upload int,
-    --Android端上传的用户ID.
-    user_id_by_upload varchar(30)
+    --修改id_upload成uMobileKey，用GUID来标识唯一性，方便多设备的数据同步使用
+    uMobileKey uniqueidentifier
 )
+go
+create unique index idx_uMobileKey_u on dbo.qmCheckRecordMst(uMobileKey)
 go
 --QC检验明细，主要用户存储检验图片，一个检验项目会对应多张检验图片.
 if object_id('dbo.qmCheckRecordDtl') is not null
     drop table dbo.qmCheckRecordDtl
 create table dbo.qmCheckRecordDtl (
-    iID int,
+    --该字段进行了修改
+    iID int identity(1,1) primary key,
     iMstID int,
     --文件名称，该字段是用于同步文件时使用的，与业务没有关系.
     --在同步数据时会在这里生成一个文件名称:用户ID+主表ID+当前记录ID.png.
@@ -73,8 +77,12 @@ create table dbo.qmCheckRecordDtl (
     --用于存储图片，因为pyodbc的原因该字段只支持image类型.
     bPhoto image,
     dCreateDate datetime,
-    datetime_delete datetime
+    datetime_modify datetime,
+    datetime_delete datetime,
+    uMobileKey uniqueidentifier
 )
+go
+create unique index idx_uMobileKey_u on dbo.qmCheckRecordDtl(uMobileKey)
 go
 --插入测试用户.
 insert into dbo.smUser
