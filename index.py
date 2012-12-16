@@ -1,14 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from bottle import route, run, get, post, request, response
+from bottle import route, run, post, request, response, abort
 import dbHelper
 import json
-import logging
-
-#HTTP_CODES['Request Timeout'] = 100000
-#HTTP_CODES['Gateway Timeout'] = 100000
-
 
 @route('/')
 @route('/hello')
@@ -93,7 +88,7 @@ def uploadCheckRecord():
 @post('/uploadCheckRecordPic')
 def uploadCheckRecordPic():
     #name = request.froms.name
- 
+
     data = request.files.data
     if data is not None:
         print('ok')
@@ -121,4 +116,5 @@ def showpic():
 def fmtContent(data, status='succeed', error=''):
     return '{"status":"'+status+'","error":"'+error+'","data":['+data+']}'
 
-run(host="192.168.100.201", port=8080, debug=True)
+if __name__ == "__main__":
+    run(host="192.168.100.201", port=8080, debug=True)
