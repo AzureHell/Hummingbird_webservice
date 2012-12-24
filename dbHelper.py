@@ -1,11 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import sys, time, json
+import sys, time
 import re
 import pyodbc
 import chardet
-import locale, codecs
+import locale
 
 locale.setlocale(locale.LC_ALL,"en_US.UTF-8")
 # 数据交互
@@ -51,6 +51,15 @@ def getInfo():
     
     for row in rows:
         return row[0] + " : " + row[1] + ',defaultencoding:' + sys.getdefaultencoding()
+
+def check_user_cret(username, password):
+    sql = changeSqlForDb("select #mssql# sUserID, sUserName, sPasswordMD5 from smUser where sUserID = '%s' #sqlite3#"%(username), mssql="top 1", sqlite3="limit 1")
+    rows = sqlQuery(getConn(), sql)
+    #1 row only
+    for row in rows:
+        if row.sPasswordMD5 == password:
+            return True
+    return False
 
 def checkUser(username, password):
     sql = changeSqlForDb("select #mssql# sUserID, sUserName, sPasswordMD5 from smUser where sUserID = '%s' #sqlite3#"%(username), mssql="top 1", sqlite3="limit 1")

@@ -16,6 +16,24 @@ def get_post_json():
     except ValueError:
         abort(400, 'Bad request: Could not decode request body(expected JSON).')
 
+@route('/login')
+def login():
+    username = request.forms.get('username')
+    password = request.forms.get('password')
+    if dbHelper.check_user_cret(username, password):
+        response.set_cookie('acount', username, "", path="")
+        return "you're welcome!"
+    else:
+        return "login's failed!"
+
+@route('/restricted')
+def restricted_are():
+    # get client ip address
+    remoteip = request.environ.get('REMOTE_ADDR')
+    username = request.get_cookie("account", secret='', path="")
+    if username:
+        return "Welcome agent!"
+
 @post('/checkuser')
 def checkUser():
     content = request.json
