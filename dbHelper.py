@@ -78,9 +78,13 @@ def downloadCheckPlan(sQCUserID, iID):
     rows = sqlQuery(getConn(), sql)
     for row in rows:
         #临时用这种方法处理下
-        sCheckItemDesc = row.sCheckItemDesc[:row.sCheckItemDesc.find(u'\x00')]
+        if row.sCheckItemDesc != None:
+            sCheckItemDesc = row.sCheckItemDesc[:row.sCheckItemDesc.find(u'\x00')]
+        else:
+            sCheckItemDesc = ""
         stra = '{"iID":"'+str(row.iID)+'","iFactoryID":"'+str(row.iFactoryID)+'","sOrderNo":"'+row.sOrderNo+'","sStyleNo":"'+row.sStyleNo+'","sProductID":"' \
-            +row.sProductID+'","dRequestCheck":"'+str(row.dRequestCheck)+'","sCheckItemDesc":"'+sCheckItemDesc+'","sQCUserID":"'+str(row.sQCUserID)+'","sUserID":"'+str(row.sUserID)+'","bApproved":"'+str(row.bApproved)+'"}'
+            + row.sProductID+'","dRequestCheck":"'+str(row.dRequestCheck)+'","sCheckItemDesc":"'+sCheckItemDesc+'","sQCUserID":"' \
+            + str(row.sQCUserID)+'","sUserID":"'+str(row.sUserID)+'","bApproved":"'+str(row.bApproved)+'"}'
         if jsonresult <> '':
             jsonresult += ',' + stra
         else:
