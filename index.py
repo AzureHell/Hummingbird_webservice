@@ -5,16 +5,19 @@ from bottle import route, run, post, request, response, abort
 import dbHelper
 import json
 
+
 @route('/')
 @route('/hello')
 def hello():
     return dbHelper.getInfo()
+
 
 def get_post_json():
     try:
         return json.load(request.body)
     except ValueError:
         abort(400, 'Bad request: Could not decode request body(expected JSON).')
+
 
 @route('/login')
 def login():
@@ -26,13 +29,15 @@ def login():
     else:
         return "login's failed!"
 
+
 @route('/restricted')
 def restricted_are():
     # get client ip address
-    remoteip = request.environ.get('REMOTE_ADDR')
+    # remoteip = request.environ.get('REMOTE_ADDR')
     username = request.get_cookie("account", secret='', path="")
     if username:
         return "Welcome agent!"
+
 
 @post('/checkuser')
 def checkUser():
@@ -50,11 +55,12 @@ def checkUser():
     result = dbHelper.checkUser(username, password)
     print(result)
     if result[0:6] == "error:":
-        str = fmtContent("", 'failed', result[result.find(':')+1:])
+        str = fmtContent("", 'failed', result[result.find(':') + 1:])
     else:
         str = fmtContent(result)
     print(str)
     return str
+
 
 @post('/downloadCheckPlan')
 def downloadCheckPlan():
@@ -70,12 +76,13 @@ def downloadCheckPlan():
     result = dbHelper.downloadCheckPlan(sQCUserID, iID)
     #print(result)
     if result[0:6] == "error:":
-        str = fmtContent("", 'failed', result[result.find(':')+1:])
+        str = fmtContent("", 'failed', result[result.find(':') + 1:])
     else:
         str = fmtContent(result)
     print(str)
     #response.content_type = 'text/html; charset=utf8'
     return str
+
 
 @post('/uploadCheckRecord')
 def uploadCheckRecord():
@@ -97,11 +104,12 @@ def uploadCheckRecord():
     result = dbHelper.uploadCheckRecord(masterDict, detailCount, detailDict)
     #print(result)
     if result[0:6] == "error:":
-        str = fmtContent("", 'failed', result[result.find(':')+1:])
+        str = fmtContent("", 'failed', result[result.find(':') + 1:])
     else:
         str = fmtContent(result)
     print(str)
     return str
+
 
 @post('/uploadCheckRecordPic')
 def uploadCheckRecordPic():
@@ -110,7 +118,8 @@ def uploadCheckRecordPic():
     data = request.files.data
     if data is not None:
         print('ok')
-        raw = data.file.read() # This is dangerous for big files
+        # This is dangerous for big files
+        raw = data.file.read()
         key = data.filename
 
     print('key: ' + key)
@@ -120,19 +129,23 @@ def uploadCheckRecordPic():
     result = dbHelper.uploadCheckRecordPic(key, raw)
     print(result)
     if result[0:6] == "error:":
-        str = fmtContent("", 'failed', result[result.find(':')+1:])
+        str = fmtContent("", 'failed', result[result.find(':') + 1:])
     else:
         str = fmtContent(result)
     print(str)
     return str
+
 
 @route('/showpic')
 def showpic():
     response.set_header("Content-type", "image/PNG")
     return dbHelper.showPic()
 
+
 def fmtContent(data, status='succeed', error=''):
-    return '{"status":"'+status+'","error":"'+error+'","data":['+data+']}'
+    return '{"status":"' + status + '","error":"' + error \
+        + '","data":[' + data + ']}'
+
 
 if __name__ == "__main__":
-    run(host="192.168.100.201", port=8080, debug=True)
+    run(host="192.168.100.200", port=8080, debug=True, reloader=True)
